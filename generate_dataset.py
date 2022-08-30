@@ -9,6 +9,7 @@ from lyricsgenius.artist import Artist
 from lyricsgenius.song import Song
 
 DELIMITER = "|"
+MAX_SONGS = 10
 
 
 def cleanup_lyrics(lyrics: str) -> str:
@@ -46,7 +47,7 @@ genius = Genius(config['GENIUS_API_TOKEN'], sleep_time=0.75, timeout=15)
 artist: str = (input('Enter artist name: ')).lower()
 
 # Getting artist
-artist: Artist = genius.search_artist(artist, per_page=1, get_full_info=False, max_songs=50)
+artist: Artist = genius.search_artist(artist, per_page=1, get_full_info=False, max_songs=MAX_SONGS)
 
 # Getting songs
 song: Song
