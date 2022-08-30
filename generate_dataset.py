@@ -46,7 +46,7 @@ genius = Genius(config['GENIUS_API_TOKEN'], sleep_time=0.75, timeout=15)
 artist: str = (input('Enter artist name: ')).lower()
 
 # Getting artist
-artist: Artist = genius.search_artist(artist, per_page=1, get_full_info=False, max_songs=50)
+artist: Artist = genius.search_artist(artist, per_page=1, get_full_info=False, max_songs=5)
 
 # Getting songs
 song: Song
@@ -56,6 +56,7 @@ for song in artist.songs:
         # Checking if song is already in dataset
         continue
     print(f'Adding {song.title} to dataset.csv')
+    print(song)
     dataset.loc[len(dataset)] = [artist.name, song.title, cleanup_lyrics(song.lyrics)]
 
 dataset.to_csv('dataset.csv', index=False, sep=DELIMITER)
