@@ -9,7 +9,8 @@ from lyricsgenius.artist import Artist
 from lyricsgenius.song import Song
 
 DELIMITER = "|"
-MAX_SONGS = 10
+MAX_SONGS = 50
+ARTISTS = []
 
 
 def cleanup_lyrics(lyrics: str) -> str:
@@ -19,9 +20,11 @@ def cleanup_lyrics(lyrics: str) -> str:
         - repeated newlines
         - first line of lyrics
     """
-    lyrics = lyrics.split("\n", 1)[1]
+    try:
+        lyrics = lyrics.split("\n", 1)[1]
+    except IndexError:
+        pass
     lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics)
-    lyrics.replace("\n\n", "\n")
     lyrics = re.sub(r"[0-9]*Embed*", "", lyrics)
     lyrics = re.sub(r"URLCopyEmbedCopy", "", lyrics)
     return lyrics
@@ -32,7 +35,7 @@ if not os.path.exists('dataset.csv'):
     with open('dataset.csv', 'w') as file:
         print('Creating dataset.csv')
         file.close()
-with open('dataset.csv', 'r') as dataset_file:
+with open('dataset.csv', 'r', encoding='utf8') as dataset_file:
     if dataset_file.read() == '':
         print('Adding headers to dataset.csv')
         dataset_file.close()
@@ -42,21 +45,27 @@ with open('dataset.csv', 'r') as dataset_file:
 with open("config.json", "r") as configFile:
     config: dict = json.load(configFile)
     configFile.close()
-genius = Genius(config['GENIUS_API_TOKEN'], sleep_time=0.75, timeout=15)
+genius = Genius(config['GENIUS_API_TOKEN'], sleep_time=0.5, timeout=15, remove_section_headers=True,
+                excluded_terms=['(Remix)', '(Live)', '(Demo)', '(Cover)', '(Instrumental)', '(Clean)', '(Version)',
+                                '(Extended)', '(Original)', '(Silent)', '(Radio Edit)'])
 
-artist: str = (input('Enter artist name: ')).lower()
-
-# Getting artist
-artist: Artist = genius.search_artist(artist, per_page=1, get_full_info=False, max_songs=MAX_SONGS)
+artists: list[str] = input('Enter artist name: ').split(',') or ARTISTS
 
 # Getting songs
 song: Song
 dataset = pd.read_csv('dataset.csv', sep=DELIMITER)
-for song in artist.songs:
-    if artist.name in dataset['artist'].values and song.title in dataset['title'].values:
-        # Checking if song is already in dataset
-        continue
-    print(f'Adding {song.title} to dataset.csv')
-    dataset.loc[len(dataset)] = [artist.name, song.title, cleanup_lyrics(song.lyrics)]
+for artist in artists:
+    # Getting artist
+    artist: Artist = genius.search_artist(artist, per_page=1, get_full_info=False, max_songs=MAX_SONGS)
+    for song in artist.songs:
+        if artist.name in dataset['artist'].values and song.title in dataset['title'].values:
+            # Checking if song is already in dataset
+            continue
+        print(f'Adding {song.title} to dataset.csv')
+        dataset.loc[len(dataset)] = [artist.name, song.title, cleanup_lyrics(song.lyrics)]
+    dataset.to_csv('dataset.csv', index=False, sep=DELIMITER)
 
-dataset.to_csv('dataset.csv', index=False, sep=DELIMITER)
+# lyrics = ''.join(dataset['lyrics'].values)
+# with open('lyrics.txt', 'w', encoding='utf8') as file:
+#     file.write(lyrics)
+#     file.close()
