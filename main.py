@@ -43,7 +43,7 @@ if __name__ == '__main__':
     dataset = dataset.cache()
     dataset = dataset.shuffle(buffer_size=1000)
     dataset = dataset.batch(512)
-    del input_sequences, one_hot_labels, sequences, labels
+    del input_sequences, one_hot_labels, sequences, labels, corpus
 
     history = model.fit(dataset, epochs=100, verbose=1)
 
@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
     plot_graphs(history, 'accuracy')
 
-    next_words = 100
+    next_words = 50
 
     while True:
         seed_text = input("Enter seed text: ")
@@ -76,4 +76,4 @@ if __name__ == '__main__':
                     break
             seed_text += " " + output_word
 
-        print("Output: "+seed_text)
+        print("Output: " + seed_text)
