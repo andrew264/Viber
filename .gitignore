@@ -1,4 +1,5 @@
 dataset.csv
 config.json
+vocab.txt
 /.idea
 /__pycache__

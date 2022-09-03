@@ -9,7 +9,9 @@ def create_model(max_sequence_len: int, total_words: int) -> Sequential:
     """
     model = Sequential()
     model.add(Embedding(total_words, 64, input_length=max_sequence_len - 1))
-    model.add(Bidirectional(LSTM(20)))
+    model.add(Bidirectional(LSTM(100, return_sequences=True)))
+    model.add(Bidirectional(LSTM(100)))
+    model.add(Dense(100, activation='relu'))
     model.add(Dense(total_words, activation='softmax'))
     model.compile(loss=CategoricalCrossentropy(), optimizer='adam', metrics=['accuracy'])
     return model
