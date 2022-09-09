@@ -1,5 +1,7 @@
 keras
 tensorflow
+tensorflow-text
 pandas
 lyricsgenius
-tensorflow_text
+numpy
+matplotlib

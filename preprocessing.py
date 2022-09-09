@@ -9,8 +9,9 @@ from bert_tokenizer import BERTTokenizer
 
 CONTRACTIONS = (("i'm", "i am"), ("he's", "he is"), ("she's", "she is"), ("it's", "it is"), ("that's", "that is"),
                 ("what's", "what is"), ("when's", "when is"), ("where's", "where is"), ("how's", "how is"),
-                ("ain't", "is not"), ("can't", "can not"), ("won't", "will not"), ("n't", " not"), ("'ll", " will"),
-                ("'ve", " have"), ("'re", " are"), ("'d", " would"), ("n'", "ng"), ("'bout", "about"),
+                ("ain't", "is not"), ("can't", "can not"), ("won't", "will not"), ("n't", " not"), ("ya'll", "you all"),
+                ("y'all", "you all"), ("'ll", " will"), ("'cause", "because"), ("'em", "them"), ("'til", "until"),
+                ("'ve", " have"), ("'re", " are"), ("'d", " would"), ("in'", "ing"), ("'bout", "about"),
                 ("'cause", "because"), ("cuz", "because"), ("in'", "ing"))
 
 
@@ -55,6 +56,8 @@ def cleanup_lyrics(lyrics: str) -> list[str]:
     for line in lyrics:
         if line.strip() == "":
             continue
+        # replace - with space
+        line = re.sub("-", " ", line)
         # Keep space, a to z, and select punctuation.
         line = re.sub('[^ a-z.?!,¿]', '', line)
         # Add spaces around punctuation.

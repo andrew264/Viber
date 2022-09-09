@@ -25,8 +25,7 @@ def cleanup_lyrics(lyrics: str) -> str:
     except IndexError:
         pass
     lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics)
-    lyrics = re.sub(r"[0-9]*Embed*", "", lyrics)
-    lyrics = re.sub(r"URLCopyEmbedCopy", "", lyrics)
+    lyrics = re.sub(r"[0-9]*URLCopyEmbedCopy", '', lyrics)
     return lyrics
 
 
@@ -47,7 +46,8 @@ with open("config.json", "r") as configFile:
     configFile.close()
 genius = Genius(config['GENIUS_API_TOKEN'], sleep_time=0.5, timeout=15, remove_section_headers=True,
                 excluded_terms=['(Remix)', '(Live)', '(Demo)', '(Cover)', '(Instrumental)', '(Clean)', '(Version)',
-                                '(Extended)', '(Original)', '(Silent)', '(Radio Edit)'])
+                                '(Extended)', '(Original)', '(Silent)', '(Radio Edit)'],
+                retries=3)
 
 artists: list[str] = input('Enter artist name: ').split(',') or ARTISTS
 
@@ -62,7 +62,8 @@ for artist in artists:
             # Checking if song is already in dataset
             continue
         print(f'Adding {song.title} to dataset.csv')
-        dataset.loc[len(dataset)] = [artist.name, song.title, cleanup_lyrics(song.lyrics)]
+        dataset.loc[len(dataset)] = [artist.name.strip(), song.title.strip(), cleanup_lyrics(song.lyrics)]
+    dataset.sort_values(by=['artist', 'title'], inplace=True)
     dataset.to_csv('dataset.csv', index=False, sep=DELIMITER)
 
 # lyrics = ''.join(dataset['lyrics'].values)
