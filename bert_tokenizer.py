@@ -1,3 +1,4 @@
+import os
 import pathlib
 import re
 from abc import ABC
@@ -9,6 +10,8 @@ import tensorflow_text as text
 class BERTTokenizer(tf.Module, ABC):
     def __init__(self, vocab_path):
         super().__init__()
+        if not os.path.exists(vocab_path):
+            raise FileNotFoundError("Vocabulary file not found.")
         self.tokenizer = text.BertTokenizer(vocab_path, lower_case=True)
         self._reserved_tokens = ["[PAD]", "[UNK]"]
         self._vocab_path = tf.saved_model.Asset(vocab_path)

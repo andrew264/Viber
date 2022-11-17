@@ -3,3 +3,5 @@ config.json
 vocab.txt
 /.idea
 /__pycache__
+/saved_model
+/.run

@@ -15,3 +15,7 @@ def create_model(max_sequence_len: int, total_words: int) -> Sequential:
     model.add(Dense(total_words, activation='softmax'))
     model.compile(loss=CategoricalCrossentropy(), optimizer='adam', metrics=['accuracy'])
     return model
+
+
+def load_model():
+    return None

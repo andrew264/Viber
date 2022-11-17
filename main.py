@@ -6,16 +6,17 @@ from matplotlib.pyplot import ylabel, plot, show, xlabel
 
 from model import create_model
 from preprocessing import create_lyrics_corpus, create_tokenizer, create_sequence, create_tokenized_corpus
+from run_model import run
 
 DELIMITER = "|"
 
 if __name__ == '__main__':
-    dataset_df = pd.read_csv('dataset.csv', dtype=str, delimiter=DELIMITER)
+    dataset_df = pd.read_csv('dataset.csv', dtype=str, delimiter=DELIMITER).sample(n=500)
     # Create the corpus using the 'text' column containing lyrics
     corpus = create_lyrics_corpus(dataset_df, 'lyrics')
     del dataset_df
     # Tokenize the corpus
-    tokenizer = create_tokenizer(corpus)
+    tokenizer = create_tokenizer(corpus, num_words=(2 ** 11))
 
     total_words = tokenizer.get_vocab_size()
     print(total_words)
@@ -36,7 +37,7 @@ if __name__ == '__main__':
     dataset = dataset.batch(512)
     del input_sequences, one_hot_labels, sequences, labels
 
-    history = model.fit(dataset, epochs=50, verbose=1)
+    history = model.fit(dataset, epochs=15, verbose=1)
 
 
     def plot_graphs(history, string):
@@ -50,16 +51,4 @@ if __name__ == '__main__':
 
     next_words = 50
 
-    while True:
-        seed_text = input("Enter seed text: ")
-        if seed_text == '':
-            break
-        token_list = []
-        token_list.extend(tokenizer.tokenize(seed_text)[0].numpy().tolist())
-        for i in range(next_words):
-            tokens = pad_sequences([token_list], maxlen=max_sequence_length - 1, padding='pre')
-            predicted_probs = model.predict(tokens)[0]
-            predicted = np.random.choice([x for x in range(len(predicted_probs))],
-                                         p=predicted_probs)
-            token_list.append(predicted)
-        print("Output: " + tokenizer.detokenize([token_list])[0].numpy().decode())
+    run(model, tokenizer, max_sequence_length)
