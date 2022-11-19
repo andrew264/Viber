@@ -1,7 +1,5 @@
-import numpy as np
 import pandas as pd
 import tensorflow as tf
-from keras.utils import pad_sequences
 from matplotlib.pyplot import ylabel, plot, show, xlabel
 
 from model import create_model
@@ -11,7 +9,7 @@ from run_model import run
 DELIMITER = "|"
 
 if __name__ == '__main__':
-    dataset_df = pd.read_csv('dataset.csv', dtype=str, delimiter=DELIMITER).sample(n=500)
+    dataset_df = pd.read_csv('dataset.csv', dtype=str, delimiter=DELIMITER).sample(n=600)
     # Create the corpus using the 'text' column containing lyrics
     corpus = create_lyrics_corpus(dataset_df, 'lyrics')
     del dataset_df
@@ -34,14 +32,20 @@ if __name__ == '__main__':
 
     model = create_model(max_sequence_length, total_words)
     dataset = tf.data.Dataset.from_tensor_slices((input_sequences, one_hot_labels))
-    dataset = dataset.batch(512)
+    dataset = dataset.batch(512, drop_remainder=True)
     del input_sequences, one_hot_labels, sequences, labels
 
-    history = model.fit(dataset, epochs=15, verbose=1)
+    checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+        filepath='./checkpoints/weights_{epoch:02d}', monitor='accuracy', save_best_only=True, mode='max',
+        save_weights_only=True, )
+    early_stop = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
+
+    history = model.fit(dataset, epochs=50, verbose=1,
+                        callbacks=[checkpoint_callback, early_stop])
 
 
-    def plot_graphs(history, string):
-        plot(history.history[string])
+    def plot_graphs(_history, string):
+        plot(_history.history[string])
         xlabel("Epochs")
         ylabel(string)
         show()
@@ -51,4 +55,4 @@ if __name__ == '__main__':
 
     next_words = 50
 
-    run(model, tokenizer, max_sequence_length)
+    run(tokenizer, max_sequence_length)
