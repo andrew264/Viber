@@ -1,6 +1,7 @@
 import os
 import re
 
+import pandas as pd
 import tensorflow as tf
 from keras.utils import pad_sequences
 from tensorflow_text.tools.wordpiece_vocab import bert_vocab_from_dataset as bert
@@ -38,7 +39,7 @@ def create_tokenizer(corpus, num_words=None) -> BERTTokenizer:
     return BERTTokenizer("./vocab.txt")
 
 
-def create_lyrics_corpus(dataset, field):
+def create_lyrics_corpus(dataset: pd.DataFrame, field: str):
     # Make it lowercase
     dataset[field] = dataset[field].str.lower()
     # Make it one long string to split by line
@@ -91,7 +92,7 @@ def create_sequence(tokenized_corpus: tf.RaggedTensor) -> tuple[tf.Tensor, int]:
 
 def create_tokenized_corpus(tokenizer: BERTTokenizer, corpus: list) -> tf.RaggedTensor:
     """Create a Tokenized Corpus"""
-    dataset = tf.data.Dataset.from_tensor_slices(corpus)
+    dataset = tf.data.Dataset.from_tensor_slices(list(set(corpus)))
     tokenized_corpus = []
     for batch in dataset.batch(256):
         batch = tokenizer.tokenize(batch)
