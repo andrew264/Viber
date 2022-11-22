@@ -7,30 +7,35 @@ from preprocessing import create_lyrics_corpus, create_tokenizer, create_sequenc
 from run_model import run
 
 DELIMITER = "|"
+max_seq_len = 48
 
 if __name__ == '__main__':
-    dataset_df = pd.read_csv('dataset.csv', dtype=str, delimiter=DELIMITER).sample(n=600)
+    dataset_df = pd.read_csv('dataset.csv', dtype=str, delimiter=DELIMITER).sample(n=250)
     # Create the corpus using the 'text' column containing lyrics
     corpus = create_lyrics_corpus(dataset_df, 'lyrics')
     del dataset_df
     # Tokenize the corpus
-    tokenizer = create_tokenizer(corpus, num_words=(2 ** 11))
+    tokenizer = create_tokenizer(corpus, num_words=(2 ** 12))
 
     total_words = tokenizer.get_vocab_size()
     print(total_words)
 
     tokenized_corpus = create_tokenized_corpus(tokenizer, corpus)
-    sequences, max_sequence_length = create_sequence(tokenized_corpus)
+    sequences = create_sequence(tokenized_corpus, max_seq_len)
     print(f"Total Sequences: {tf.shape(sequences)[0]}")
-    print(f"Max Sequence length: {max_sequence_length}")
+    # print(f"Max Sequence length: {max_sequence_length}")
     del corpus, tokenized_corpus
 
     # Split sequences between the "input" sequence and "output" predicted word
     input_sequences, labels = sequences[:, :-1], sequences[:, -1]
+    print(f"Input sequences shape: {tf.shape(input_sequences)}")
+    print(f"Labels shape: {tf.shape(labels)}")
     # One-hot encode the labels
     one_hot_labels = tf.keras.utils.to_categorical(labels, num_classes=total_words)
 
-    model = create_model(max_sequence_length, total_words)
+    model = create_model(max_seq_len, total_words)
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.build(input_shape=(None, max_seq_len - 1))
     dataset = tf.data.Dataset.from_tensor_slices((input_sequences, one_hot_labels))
     dataset = dataset.batch(512, drop_remainder=True)
     del input_sequences, one_hot_labels, sequences, labels
@@ -53,6 +58,4 @@ if __name__ == '__main__':
 
     plot_graphs(history, 'accuracy')
 
-    next_words = 50
-
-    run(tokenizer, max_sequence_length)
+    run(tokenizer, max_seq_len)

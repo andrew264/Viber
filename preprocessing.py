@@ -70,24 +70,21 @@ def cleanup_lyrics(lyrics: str) -> list[str]:
     return corpus
 
 
-def create_sequence(tokenized_corpus: tf.RaggedTensor) -> tuple[tf.Tensor, int]:
+def create_sequence(tokenized_corpus: tf.RaggedTensor, max_seq_len) -> tuple[tf.Tensor, int]:
     """
     Create Padded Sequence from Tokenized Corpus
     Returns padded_sequence, max_sequence_length
     """
     sequences = []
-    max_sequence_length = 0
     for line in tokenized_corpus:
         for j in range(1, len(line)):
             n_gram_sequence = line[:j + 1]
-            if len(n_gram_sequence) > max_sequence_length:
-                max_sequence_length = len(n_gram_sequence)
             sequences.append(n_gram_sequence)
 
     print("Padding Sequences")
-    padded_sequence = pad_sequences(sequences, maxlen=max_sequence_length, padding='pre')
+    padded_sequence = pad_sequences(sequences, maxlen=max_seq_len)
     del sequences
-    return padded_sequence, max_sequence_length
+    return padded_sequence
 
 
 def create_tokenized_corpus(tokenizer: BERTTokenizer, corpus: list) -> tf.RaggedTensor:
