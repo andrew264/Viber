@@ -21,6 +21,7 @@ if __name__ == '__main__':
     print("Median length of lines: ", np.median(length_of_lines))
     print("Max length of lines: ", np.max(length_of_lines))
     print("Min length of lines: ", np.min(length_of_lines))
+    print("95th percentile length of lines: ", np.percentile(length_of_lines, 95))
     # Plot the distribution of line lengths
     plt.hist(length_of_lines, bins=np.max(length_of_lines))
     plt.title("Distribution of line lengths")
