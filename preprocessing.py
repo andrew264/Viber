@@ -89,11 +89,33 @@ def create_sequence(tokenized_corpus: tf.RaggedTensor, max_seq_len) -> tuple[tf.
 
 def create_tokenized_corpus(tokenizer: BERTTokenizer, corpus: list) -> tf.RaggedTensor:
     """Create a Tokenized Corpus"""
-    dataset = tf.data.Dataset.from_tensor_slices(list(set(corpus)))
-    tokenized_corpus = []
-    for batch in dataset.batch(256):
-        batch = tokenizer.tokenize(batch)
-        tokenized_corpus.extend(batch)
+    with tf.device("/cpu:0"):
+        dataset = tf.data.Dataset.from_tensor_slices(list(set(corpus)))
+        tokenized_corpus = []
+        for batch in dataset.batch(256):
+            batch = tokenizer.tokenize(batch)
+            tokenized_corpus.extend(batch)
 
-    del dataset
-    return tf.ragged.stack(tokenized_corpus)
+        del dataset
+        return tf.ragged.stack(tokenized_corpus)
+
+
+def create_dataset_from_df(df: pd.DataFrame, tokenizer: BERTTokenizer, max_seq_len: int) -> tf.data.Dataset:
+    """Create a Dataset from a pandas DataFrame"""
+    print("Creating Corpus...")
+    corpus = create_lyrics_corpus(df, "lyrics")
+    print(f"Tokenizing {len(corpus)} lines of lyrics")
+    tokenized_corpus = create_tokenized_corpus(tokenizer, corpus)
+    print(f"Padding {tokenized_corpus.shape[0]} Sequences")
+    sequences = create_sequence(tokenized_corpus, max_seq_len)
+    del tokenized_corpus
+    input_sequences, labels = sequences[:, :-1], sequences[:, -1]
+    del sequences
+    print(f"Input sequences shape: {tf.shape(input_sequences)}")
+    print(f"Labels shape: {tf.shape(labels)}")
+    print(f"Creating Dataset from {len(labels)} Sequences")
+    # One-hot encode the labels
+    with tf.device("/cpu:0"):
+        return tf.data.Dataset.from_tensor_slices(
+            (input_sequences,
+             tf.one_hot(labels, depth=tokenizer.get_vocab_size()))).batch(512, drop_remainder=True)
