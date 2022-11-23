@@ -20,12 +20,13 @@ def cleanup_lyrics(lyrics: str) -> str:
         - repeated newlines
         - first line of lyrics
     """
-    try:
-        lyrics = lyrics.split("\n", 1)[1]
-    except IndexError:
-        pass
+    # try:
+    #     lyrics = lyrics.split("\n", 1)[1]
+    # except IndexError:
+    #     pass
     lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics)
     lyrics = re.sub(r"[0-9]*URLCopyEmbedCopy", '', lyrics)
+    lyrics = re.sub(r"[0-9]*Embed", '', lyrics)
     return break_long_lines(lyrics)
 
 
@@ -44,7 +45,7 @@ def break_long_lines(lyrics: str) -> str:
                 lines.append(sub_line + '.')
         else:
             lines.append(line)
-    return '\n'.join(lines)
+    return '\n'.join(lines).encode('ascii', errors='ignore').decode()
 
 
 if __name__ == '__main__':
@@ -69,6 +70,18 @@ if __name__ == '__main__':
                     retries=3)
 
     artists: list[str] = input('Enter artist name: ').split(',') or ARTISTS
+    repr(artists)
+
+    if not artists or artists == ['']:
+        print('cleaning dataset.csv')
+        dataset_df = pd.read_csv('dataset.csv', dtype=str, delimiter=DELIMITER)
+        dataset_df = dataset_df.drop_duplicates(subset=['artist', 'title', 'lyrics'])
+        for index, row in dataset_df.iterrows():
+            dataset_df.at[index, 'lyrics'] = cleanup_lyrics(row['lyrics'])
+            dataset_df.at[index, 'artist'] = row['artist'].encode('ascii', errors='ignore').decode()
+            dataset_df.at[index, 'title'] = row['title'].encode('ascii', errors='ignore').decode()
+        dataset_df.to_csv('dataset.csv', index=False, sep=DELIMITER)
+        exit(1)
 
     # Getting songs
     song: Song
@@ -81,7 +94,9 @@ if __name__ == '__main__':
                 # Checking if song is already in dataset
                 continue
             print(f'Adding {song.title} to dataset.csv')
-            dataset.loc[len(dataset)] = [artist.name.strip(), song.title.strip(), cleanup_lyrics(song.lyrics)]
+            dataset.loc[len(dataset)] = [artist.name.encode('ascii', errors='ignore').decode(),
+                                         song.title.encode('ascii', errors='ignore').decode(),
+                                         cleanup_lyrics(song.lyrics)]
         dataset.sort_values(by=['artist', 'title'], inplace=True)
         dataset.to_csv('dataset.csv', index=False, sep=DELIMITER)
 
