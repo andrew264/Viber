@@ -1,3 +1,4 @@
+import datetime
 import os
 import re
 
@@ -76,46 +77,42 @@ def create_sequence(tokenized_corpus: tf.RaggedTensor, max_seq_len) -> tuple[tf.
     Returns padded_sequence, max_sequence_length
     """
     sequences = []
+    print("Creating Sequences...")
+    start = datetime.datetime.now()
     for line in tokenized_corpus:
         for j in range(1, len(line)):
             n_gram_sequence = line[:j + 1]
             sequences.append(n_gram_sequence)
 
-    print("Padding Sequences")
+    print(f"Created {len(sequences)} sequences in {(datetime.datetime.now() - start).seconds} seconds")
+    print("Padding Sequences...")
+    start = datetime.datetime.now()
     padded_sequence = pad_sequences(sequences, maxlen=max_seq_len)
-    del sequences
+    print(f"Padded {len(padded_sequence)} sequences in {(datetime.datetime.now() - start).seconds} seconds")
+    del sequences, start
     return padded_sequence
 
 
-def create_tokenized_corpus(tokenizer: BERTTokenizer, corpus: list) -> tf.RaggedTensor:
-    """Create a Tokenized Corpus"""
-    with tf.device("/cpu:0"):
-        dataset = tf.data.Dataset.from_tensor_slices(list(set(corpus)))
-        tokenized_corpus = []
-        for batch in dataset.batch(256):
-            batch = tokenizer.tokenize(batch)
-            tokenized_corpus.extend(batch)
-
-        del dataset
-        return tf.ragged.stack(tokenized_corpus)
-
-
-def create_dataset_from_df(df: pd.DataFrame, tokenizer: BERTTokenizer, max_seq_len: int) -> tf.data.Dataset:
+def create_dataset_from_df(df: pd.DataFrame, tokenizer: BERTTokenizer, max_seq_len: int) -> [tf.data.Dataset]:
     """Create a Dataset from a pandas DataFrame"""
     print("Creating Corpus...")
+    start = datetime.datetime.now()
     corpus = create_lyrics_corpus(df, "lyrics")
     print(f"Tokenizing {len(corpus)} lines of lyrics")
-    tokenized_corpus = create_tokenized_corpus(tokenizer, corpus)
-    print(f"Padding {tokenized_corpus.shape[0]} Sequences")
+    tokenized_corpus = tokenizer.tokenize(corpus)
+    print(f"Tokenized Corpus in {(datetime.datetime.now() - start).seconds} seconds")
+    print(f"Padding {tokenized_corpus.shape[0]} lines of lyrics")
     sequences = create_sequence(tokenized_corpus, max_seq_len)
-    del tokenized_corpus
     input_sequences, labels = sequences[:, :-1], sequences[:, -1]
-    del sequences
-    print(f"Input sequences shape: {tf.shape(input_sequences)}")
-    print(f"Labels shape: {tf.shape(labels)}")
-    print(f"Creating Dataset from {len(labels)} Sequences")
-    # One-hot encode the labels
+    del sequences, start
+    print("Creating Dataset...")
+    datasets: [tf.data.Dataset] = []
+    seqs_per_dataset = 2 ** 18
     with tf.device("/cpu:0"):
-        return tf.data.Dataset.from_tensor_slices(
-            (input_sequences,
-             tf.one_hot(labels, depth=tokenizer.get_vocab_size()))).batch(512, drop_remainder=True)
+        for i in range(0, len(input_sequences), seqs_per_dataset):
+            d = tf.data.Dataset.from_tensor_slices((input_sequences[i:i + seqs_per_dataset],
+                                                    tf.one_hot(labels[i: i + seqs_per_dataset],
+                                                               depth=tokenizer.get_vocab_size()))).batch(512)
+            datasets.append(d)
+            tf.keras.backend.clear_session()
+    return datasets

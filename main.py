@@ -29,7 +29,7 @@ def plot_graphs(_history, string):
 
 
 if __name__ == '__main__':
-    dataset_df = pd.read_csv('dataset.csv', dtype=str, delimiter=DELIMITER)
+    dataset_df = pd.read_csv('dataset.csv', dtype=str, delimiter=DELIMITER).sample(frac=1)
     print("Dataset Loaded")
     # Tokenizer
     if os.path.exists('vocab.txt'):
@@ -48,11 +48,9 @@ if __name__ == '__main__':
 
     # creating the dataset
     start_time = datetime.datetime.now()
-    dataset_dfs = [dataset_df[index:index + 200].copy() for index in range(0, len(dataset_df), 200)]
-    datasets: list[Optional[tf.data.Dataset]] = [create_dataset_from_df(df, tokenizer, max_seq_len)
-                                                 for df in dataset_dfs]
-    del dataset_dfs
-    print(f"Dataset Created in {(datetime.datetime.now() - start_time).seconds} seconds")
+
+    datasets: list[Optional[tf.data.Dataset]] = create_dataset_from_df(dataset_df, tokenizer, max_seq_len)
+    print(f"{len(datasets)} Dataset Created in {(datetime.datetime.now() - start_time).seconds} seconds")
 
     # Start training
     print("Starting Training...")
