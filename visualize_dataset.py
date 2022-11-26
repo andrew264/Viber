@@ -1,12 +1,44 @@
+import re
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
 from main import DELIMITER
+from preprocessing import CONTRACTIONS
+
+
+def pretty(d, indent=0):
+    for key, value in d.items():
+        print('\t' * indent + str(key))
+        if isinstance(value, dict):
+            pretty(value, indent + 1)
+        else:
+            print('\t' * (indent + 1) + str(value))
+
+
+def _count_words(dataset: pd.DataFrame, x="-") -> dict[str, int]:
+    dic = dict()
+    lyrics = "".join(dataset["lyrics"].str.lower())
+    for (contraction, expansion) in CONTRACTIONS:
+        lyrics = re.sub(contraction, expansion, lyrics)
+    for _line in lyrics.splitlines():
+        for word in _line.split():
+            if x in word.lower():
+                if word.lower() in dic:
+                    dic[word.lower()] += 1
+                else:
+                    dic[word.lower()] = 1
+
+    return dict(sorted(dic.items(), key=lambda x:x[1]))
+
 
 if __name__ == '__main__':
     lines = []
     dataset_df = pd.read_csv('dataset.csv', dtype=str, delimiter=DELIMITER)
+    # count words
+    words = _count_words(dataset_df)
+    pretty(words)
     # iterate over dataset
     index: int
     for index, row in dataset_df.iterrows():

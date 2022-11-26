@@ -9,12 +9,16 @@ from tensorflow_text.tools.wordpiece_vocab import bert_vocab_from_dataset as ber
 
 from bert_tokenizer import BERTTokenizer
 
-CONTRACTIONS = (("i'm", "i am"), ("he's", "he is"), ("she's", "she is"), ("it's", "it is"), ("that's", "that is"),
-                ("what's", "what is"), ("when's", "when is"), ("where's", "where is"), ("how's", "how is"),
-                ("ain't", "is not"), ("can't", "can not"), ("won't", "will not"), ("n't", " not"), ("ya'll", "you all"),
-                ("y'all", "you all"), ("'ll", " will"), ("'cause", "because"), ("'em", "them"), ("'til", "until"),
-                ("'ve", " have"), ("'re", " are"), ("'d", " would"), ("in'", "ing"), ("'bout", "about"),
-                ("'cause", "because"), ("cuz", "because"), ("in'", "ing"))
+CONTRACTIONS: tuple[tuple[str, str], ...] = \
+    (("i'm", "i am"), ("he's", "he is"), ("she's", "she is"), ("it's", "it is"), ("that's", "that is"),
+     ("what's", "what is"), ("when's", "when is"), ("where's", "where is"), ("how's", "how is"), ("who's", "who is"),
+     ("ain't", "is not"), ("can't", "can not"), ("won't", "will not"), ("n't", " not"), ("ya'll", "you all"),
+     ("y'all", "you all"), ("'ll", " will"), ("'cause", "because"), ("'em", "them"), ("'til", "until"),
+     ("'ve", " have"), ("'re", " are"), ("'d", " would"), ("in'", "ing"), ("'bout", "about"), ("there's", "there is"),
+     ("'cause", "because"), ("cuz", "because"), ("in'", "ing"), ("let's", "let us"), ("y'know", "you know"),
+     ("'round", "around"), ("gon'", "gonna"), ("lil'", "little"), ("yo'", "your"), ("'fore", "before"), ("wit'", "with"),
+     ("hol'", "hold"), ("here's", "here is"), ("one's", "one is"), ("life's", "life is"), ("you's", "you"),
+     ("love's", "love is"), ("ing's", "ing is"), ("c'mon", "come on"), ("ol'", "old"),)
 
 
 def create_tokenizer(corpus, num_words=None) -> BERTTokenizer:
