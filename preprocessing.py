@@ -1,7 +1,10 @@
 import datetime
 import os
 import re
+from typing import Tuple
+import multiprocessing
 
+import numpy as np
 import pandas as pd
 import tensorflow as tf
 from keras.utils import pad_sequences
@@ -16,7 +19,8 @@ CONTRACTIONS: tuple[tuple[str, str], ...] = \
      ("y'all", "you all"), ("'ll", " will"), ("'cause", "because"), ("'em", "them"), ("'til", "until"),
      ("'ve", " have"), ("'re", " are"), ("'d", " would"), ("in'", "ing"), ("'bout", "about"), ("there's", "there is"),
      ("'cause", "because"), ("cuz", "because"), ("in'", "ing"), ("let's", "let us"), ("y'know", "you know"),
-     ("'round", "around"), ("gon'", "gonna"), ("lil'", "little"), ("yo'", "your"), ("'fore", "before"), ("wit'", "with"),
+     ("'round", "around"), ("gon'", "gonna"), ("lil'", "little"), ("yo'", "your"), ("'fore", "before"),
+     ("wit'", "with"),
      ("hol'", "hold"), ("here's", "here is"), ("one's", "one is"), ("life's", "life is"), ("you's", "you"),
      ("love's", "love is"), ("ing's", "ing is"), ("c'mon", "come on"), ("ol'", "old"), ("im", "i am"),
      ("shoulda", "should have"))
@@ -73,7 +77,16 @@ def cleanup_lyrics(lyrics: str) -> list[str]:
     return corpus
 
 
-def create_sequence(tokenized_corpus: tf.RaggedTensor, max_seq_len) -> tuple[tf.Tensor, int]:
+def _corpus_to_ngram(corpus) -> list:
+    ngram_seqs_list = []
+    for line in corpus:
+        for j in range(1, len(line)):
+            n_gram_sequence = line[:j + 1]
+            ngram_seqs_list.append(n_gram_sequence)
+    return ngram_seqs_list
+
+
+def create_sequence(tokenized_corpus: tf.RaggedTensor, max_seq_len: int) -> tuple[tf.Tensor, int]:
     """
     Create Padded Sequence from Tokenized Corpus
     Returns padded_sequence, max_sequence_length
@@ -81,10 +94,14 @@ def create_sequence(tokenized_corpus: tf.RaggedTensor, max_seq_len) -> tuple[tf.
     sequences = []
     print("Creating Sequences...")
     start = datetime.datetime.now()
-    for line in tokenized_corpus:
-        for j in range(1, len(line)):
-            n_gram_sequence = line[:j + 1]
-            sequences.append(n_gram_sequence)
+    # split tokenized_corpus into cpu_count parts
+    cpu_count = multiprocessing.cpu_count()
+    split_corpus = np.array_split(tokenized_corpus.numpy(), cpu_count)
+
+    with multiprocessing.Pool(cpu_count) as pool:
+        sequences.extend(pool.map(_corpus_to_ngram, split_corpus))
+
+    sequences = [item for sublist in sequences for item in sublist]
 
     print(f"Created {len(sequences)} sequences in {(datetime.datetime.now() - start).seconds} seconds")
     print("Padding Sequences...")
@@ -95,26 +112,30 @@ def create_sequence(tokenized_corpus: tf.RaggedTensor, max_seq_len) -> tuple[tf.
     return padded_sequence
 
 
-def create_dataset_from_df(df: pd.DataFrame, tokenizer: BERTTokenizer, max_seq_len: int) -> [tf.data.Dataset]:
-    """Create a Dataset from a pandas DataFrame"""
+def make_sequences_and_labels_from_df(df: pd.DataFrame, tokenizer: BERTTokenizer,
+                                      max_seq_len: int) -> Tuple[Tuple, Tuple]:
     print("Creating Corpus...")
     start = datetime.datetime.now()
     corpus = create_lyrics_corpus(df, "lyrics")
     print(f"Tokenizing {len(corpus)} lines of lyrics")
     tokenized_corpus = tokenizer.tokenize(corpus)
     print(f"Tokenized Corpus in {(datetime.datetime.now() - start).seconds} seconds")
-    print(f"Padding {tokenized_corpus.shape[0]} lines of lyrics")
     sequences = create_sequence(tokenized_corpus, max_seq_len)
-    input_sequences, labels = sequences[:, :-1], sequences[:, -1]
-    del sequences, start
+    del tokenized_corpus, corpus
+    return sequences[:, :-1], sequences[:, -1]
+
+
+def generate_dataset_from_sequences(input_sequences: Tuple, labels: Tuple, vocab_size: int) -> [tf.data.Dataset]:
+    """yields Dataset in portions from a pandas DataFrame"""
     print("Creating Dataset...")
-    datasets: [tf.data.Dataset] = []
     seqs_per_dataset = 512 * 512  # batch_size * no_of_batches per dataset
+    datasets = []
     with tf.device("/cpu:0"):
         for i in range(0, len(input_sequences), seqs_per_dataset):
+            start = datetime.datetime.now()
             d = tf.data.Dataset.from_tensor_slices((input_sequences[i:i + seqs_per_dataset],
                                                     tf.one_hot(labels[i: i + seqs_per_dataset],
-                                                               depth=tokenizer.get_vocab_size()))).batch(512)
-            datasets.append(d)
+                                                               depth=vocab_size))).batch(512)
             tf.keras.backend.clear_session()
+            datasets.append(d)
     return datasets

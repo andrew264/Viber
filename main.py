@@ -9,7 +9,7 @@ from matplotlib.pyplot import ylabel, plot, show, xlabel
 
 from bert_tokenizer import BERTTokenizer
 from model import create_model
-from preprocessing import create_lyrics_corpus, create_tokenizer, create_dataset_from_df
+from preprocessing import create_lyrics_corpus, create_tokenizer, make_sequences_and_labels_from_df, generate_dataset_from_sequences
 from run_model import run
 
 DELIMITER = "|"
@@ -45,12 +45,11 @@ if __name__ == '__main__':
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath='./checkpoints/weights_{epoch:02d}', monitor='accuracy', save_weights_only=True, )
     early_stop = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
+    log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-    # creating the dataset
-    start_time = datetime.datetime.now()
-
-    datasets: list[Optional[tf.data.Dataset]] = create_dataset_from_df(dataset_df, tokenizer, max_seq_len)
-    print(f"{len(datasets)} Dataset Created in {(datetime.datetime.now() - start_time).seconds} seconds")
+    # creating input_sequences: Tuple, labels: Tuple
+    input_sequences, labels = make_sequences_and_labels_from_df(dataset_df, tokenizer, max_seq_len)
 
     # Start training
     print("Starting Training...")
@@ -59,11 +58,15 @@ if __name__ == '__main__':
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     model.build(input_shape=(None, max_seq_len - 1))
     start_time = datetime.datetime.now()
+    datasets = generate_dataset_from_sequences(input_sequences=input_sequences,
+                                               labels=labels,
+                                               vocab_size=tokenizer.get_vocab_size())
     for i, dataset in enumerate(datasets):
-        print(f"Training on dataset {i + 1} of {len(datasets)}")
+        dataset = dataset.prefetch(128)
+        print(f"Training on dataset {i + 1} / {len(datasets)}")
 
-        history = model.fit(dataset, epochs=20, verbose=1,
-                            callbacks=[checkpoint_callback, early_stop])
+        history = model.fit(dataset, epochs=10, verbose=1,
+                            callbacks=[checkpoint_callback, early_stop, tensorboard_callback])
 
         tf.keras.backend.clear_session()
         datasets[i] = None

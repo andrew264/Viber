@@ -6,3 +6,4 @@ vocab.txt
 /saved_model
 /.run
 /checkpoints
+/logs
