@@ -1,11 +1,11 @@
 import re
 
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 from main import DELIMITER
-from preprocessing import CONTRACTIONS
+from preprocessing import CONTRACTIONS, cleanup_lyrics
 
 
 def pretty(d, indent=0):
@@ -17,7 +17,7 @@ def pretty(d, indent=0):
             print('\t' * (indent + 1) + str(value))
 
 
-def _count_words(dataset: pd.DataFrame, x="-") -> dict[str, int]:
+def word_counts(dataset: pd.DataFrame, x="-") -> dict[str, int]:
     dic = dict()
     lyrics = "".join(dataset["lyrics"].str.lower())
     for (contraction, expansion) in CONTRACTIONS:
@@ -30,15 +30,39 @@ def _count_words(dataset: pd.DataFrame, x="-") -> dict[str, int]:
                 else:
                     dic[word.lower()] = 1
 
-    return dict(sorted(dic.items(), key=lambda x:x[1]))
+    return dict(sorted(dic.items(), key=lambda x: x[1]))
+
+
+def replace_words_in_dataset(dataset: pd.DataFrame, old: str, new: str = "") -> pd.DataFrame:
+    """replace words in dataset"""
+    dataset["lyrics"] = dataset["lyrics"].str.replace(old, new)
+    return dataset
+
+
+def word_frequency(dataset: pd.DataFrame) -> None:
+    """ """
+    word_freq = {}
+    clean_lyrics = cleanup_lyrics(dataset['lyrics'].str.cat())
+    for _line in clean_lyrics:
+        for _word in _line.split():
+            if _word in word_freq:
+                word_freq[_word] += 1
+            else:
+                word_freq[_word] = 1
+
+    _dataset = pd.DataFrame.from_dict(word_freq, orient="index")
+    _dataset.to_csv("word-frequency.csv", header=["FREQUENCY"])
 
 
 if __name__ == '__main__':
     lines = []
     dataset_df = pd.read_csv('dataset.csv', dtype=str, delimiter=DELIMITER)
-    # count words
-    words = _count_words(dataset_df)
-    pretty(words)
+    # get all artists
+    artists = dataset_df["artist"].unique()
+    print(f"Total artists: {len(artists)}")
+    print(f"Total songs: {len(dataset_df)}")
+    word_frequency(dataset_df)
+
     # iterate over dataset
     index: int
     for index, row in dataset_df.iterrows():

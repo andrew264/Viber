@@ -1,4 +1,4 @@
-dataset.csv
+*.csv
 config.json
 vocab.txt
 /.idea
