@@ -18,7 +18,8 @@ CONTRACTIONS: tuple[tuple[str, str], ...] = \
      ("'cause", "because"), ("cuz", "because"), ("in'", "ing"), ("let's", "let us"), ("y'know", "you know"),
      ("'round", "around"), ("gon'", "gonna"), ("lil'", "little"), ("yo'", "your"), ("'fore", "before"), ("wit'", "with"),
      ("hol'", "hold"), ("here's", "here is"), ("one's", "one is"), ("life's", "life is"), ("you's", "you"),
-     ("love's", "love is"), ("ing's", "ing is"), ("c'mon", "come on"), ("ol'", "old"),)
+     ("love's", "love is"), ("ing's", "ing is"), ("c'mon", "come on"), ("ol'", "old"), ("im", "i am"),
+     ("shoulda", "should have"))
 
 
 def create_tokenizer(corpus, num_words=None) -> BERTTokenizer:
@@ -63,13 +64,10 @@ def cleanup_lyrics(lyrics: str) -> list[str]:
         if line.strip() == "":
             continue
         # replace - with space
-        line = re.sub("-", " ", line)
         # Keep space, a to z, and select punctuation.
-        line = re.sub('[^ a-z.?!,¿]', '', line)
+        line = re.sub('[^ a-z.?!,¿/-]', '', line)
         # Add spaces around punctuation.
-        line = re.sub(r"([?.!,])", r" \1 ", line)
-        if len(line.split()) > 50:
-            line = ''.join(line.split()[:50])
+        line = re.sub(r"([?.!,¿/-])", r" \1 ", line)
         corpus.append(line)
 
     return corpus
@@ -111,7 +109,7 @@ def create_dataset_from_df(df: pd.DataFrame, tokenizer: BERTTokenizer, max_seq_l
     del sequences, start
     print("Creating Dataset...")
     datasets: [tf.data.Dataset] = []
-    seqs_per_dataset = 2 ** 18
+    seqs_per_dataset = 512 * 512  # batch_size * no_of_batches per dataset
     with tf.device("/cpu:0"):
         for i in range(0, len(input_sequences), seqs_per_dataset):
             d = tf.data.Dataset.from_tensor_slices((input_sequences[i:i + seqs_per_dataset],
