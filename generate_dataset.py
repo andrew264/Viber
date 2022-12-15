@@ -4,7 +4,6 @@ import re
 
 import pandas as pd
 from lyricsgenius import Genius
-
 from lyricsgenius.artist import Artist
 from lyricsgenius.song import Song
 
@@ -27,6 +26,9 @@ def cleanup_lyrics(lyrics: str) -> str:
     lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics)
     lyrics = re.sub(r"[0-9]*URLCopyEmbedCopy", '', lyrics)
     lyrics = re.sub(r"[0-9]*Embed", '', lyrics)
+    # if first line has "Lyrics" in it, remove it
+    if "lyrics" in lyrics.splitlines()[0].lower():
+        lyrics = lyrics.split("\n", 1)[1]
     return break_long_lines(lyrics)
 
 

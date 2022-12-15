@@ -10,7 +10,7 @@ class MyModel(keras.Model):
     def __init__(self, max_sequence_len: int, total_words: int, rnn_units: int = 512,
                  embedding_dim: int = 128, dropout_rate: float = 0.2):
         super(MyModel, self).__init__()
-        self.max_sequence_len = max_sequence_len-1
+        self.max_sequence_len = max_sequence_len - 1
         self.total_words = total_words
         self.rnn_units = rnn_units
         self.dropout_rate = dropout_rate

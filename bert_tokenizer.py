@@ -8,12 +8,13 @@ import tensorflow_text as text
 
 
 class BERTTokenizer(tf.Module, ABC):
-    def __init__(self, vocab_path):
+    def __init__(self, vocab_path, **kwargs):
         super().__init__()
         if not os.path.exists(vocab_path):
             raise FileNotFoundError("Vocabulary file not found.")
-        self.tokenizer = text.BertTokenizer(vocab_path, lower_case=True)
+        self.tokenizer = text.BertTokenizer(vocab_path, **kwargs)
         self._reserved_tokens = ["[PAD]", "[UNK]"]
+
         self._vocab_path = tf.saved_model.Asset(vocab_path)
 
         vocab = pathlib.Path(vocab_path).read_text().splitlines()
@@ -45,6 +46,7 @@ class BERTTokenizer(tf.Module, ABC):
 
     @tf.function
     def tokenize(self, strings) -> tf.RaggedTensor:
+        """Tokenizes a batch of strings to wordpieces."""
         enc: tf.RaggedTensor = self.tokenizer.tokenize(strings)
         # Merge the `word` and `word-piece` axes.
         return tf.cast(enc.merge_dims(-2, -1), dtype=tf.int32)
