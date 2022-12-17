@@ -8,7 +8,7 @@ from lyricsgenius.artist import Artist
 from lyricsgenius.song import Song
 
 DELIMITER = "|"
-MAX_SONGS = 50
+MAX_SONGS = 100
 ARTISTS = []
 
 
@@ -27,7 +27,7 @@ def cleanup_lyrics(lyrics: str) -> str:
     lyrics = re.sub(r"[0-9]*URLCopyEmbedCopy", '', lyrics)
     lyrics = re.sub(r"[0-9]*Embed", '', lyrics)
     # if first line has "Lyrics" in it, remove it
-    if "lyrics" in lyrics.splitlines()[0].lower():
+    if len(lyrics.splitlines()) > 1 and "lyrics" in lyrics.splitlines()[0].lower():
         lyrics = lyrics.split("\n", 1)[1]
     return break_long_lines(lyrics)
 
@@ -72,6 +72,7 @@ if __name__ == '__main__':
                     retries=3)
 
     artists: list[str] = input('Enter artist name: ').split(',') or ARTISTS
+    artists = list(set(artists))
     repr(artists)
 
     if not artists or artists == ['']:
@@ -79,6 +80,14 @@ if __name__ == '__main__':
         dataset_df = pd.read_csv('dataset.csv', dtype=str, delimiter=DELIMITER)
         dataset_df = dataset_df.drop_duplicates(subset=['artist', 'title', 'lyrics'])
         for index, row in dataset_df.iterrows():
+            if row['lyrics'] == 'nan' or row['lyrics'] is None or row['lyrics'] == '':
+                # remove rows with no lyrics
+                dataset_df.drop(index, inplace=True)
+                continue
+            if len(dataset_df.at[index, 'lyrics'].splitlines()) < 3:
+                # remove rows with less than 3 lines of lyrics
+                dataset_df.drop(index, inplace=True)
+                continue
             dataset_df.at[index, 'lyrics'] = cleanup_lyrics(row['lyrics'])
             dataset_df.at[index, 'artist'] = row['artist'].encode('ascii', errors='ignore').decode()
             dataset_df.at[index, 'title'] = row['title'].encode('ascii', errors='ignore').decode()
@@ -88,12 +97,17 @@ if __name__ == '__main__':
     # Getting songs
     song: Song
     dataset = pd.read_csv('dataset.csv', sep=DELIMITER)
-    for artist in artists:
+    print(f"Total Artists: {len(artists)}")
+    for i in range(len(artists)):
+        print(f"Progress: {i + 1 / len(artists) / 100:.0%} %")
         # Getting artist
-        artist: Artist = genius.search_artist(artist, per_page=1, get_full_info=False, max_songs=MAX_SONGS)
+        artist: Artist = genius.search_artist(artists[i], per_page=1, get_full_info=False, max_songs=MAX_SONGS)
         for song in artist.songs:
             if artist.name in dataset['artist'].values and song.title in dataset['title'].values:
                 # Checking if song is already in dataset
+                continue
+            if song.lyrics is None or song.lyrics == '':
+                # Checking if song has lyrics
                 continue
             print(f'Adding {song.title} to dataset.csv')
             dataset.loc[len(dataset)] = [artist.name.encode('ascii', errors='ignore').decode(),
