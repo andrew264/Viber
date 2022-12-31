@@ -50,7 +50,7 @@ def create_model(max_sequence_len: int, total_words: int) -> Sequential:
     """
     # return MyModel(max_sequence_len, total_words)
     # Dropouts are used to prevent overfitting
-    dropout_rate = 0.2
+    dropout_rate = 0.1
 
     # The embedding dimension
     embedding_dim = 256
@@ -60,7 +60,6 @@ def create_model(max_sequence_len: int, total_words: int) -> Sequential:
 
     model = Sequential()
     model.add(Embedding(total_words, embedding_dim, input_length=max_sequence_len - 1, mask_zero=True))
-    model.add(Dropout(dropout_rate))
     model.add(Bidirectional(LSTM(rnn_units, return_sequences=True)))
     model.add(Dropout(dropout_rate))
     model.add(Bidirectional(LSTM(rnn_units)))

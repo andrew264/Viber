@@ -20,33 +20,35 @@ CONTRACTIONS: tuple[tuple[str, str], ...] = \
      ("'ve", " have"), ("'re", " are"), ("'d", " would"), ("in'", "ing"), ("'bout", "about"), ("there's", "there is"),
      ("'cause", "because"), ("cuz", "because"), ("in'", "ing"), ("let's", "let us"), ("y'know", "you know"),
      ("'round", "around"), ("gon'", "gonna"), ("lil'", "little"), ("yo'", "your"), ("'fore", "before"),
-     ("wit'", "with"),
-     ("hol'", "hold"), ("here's", "here is"), ("one's", "one is"), ("life's", "life is"), ("you's", "you"),
-     ("love's", "love is"), ("ing's", "ing is"), ("c'mon", "come on"), ("ol'", "old"), (" im ", " i am "),
-     ("shoulda", "should have"), ("I'mma", "I am going to"))
+     ("wit'", "with"), ("here's", "here is"), ("one's", "one is"), ("life's", "life is"), ("you's", "you"),
+     ("love's", "love is"), ("c'mon", "come on"), (" im ", " i am "),
+     ("shoulda", "should have"))
 
 
-def create_tokenizer(corpus, num_words=None) -> BERTTokenizer:
+def create_tokenizer(corpus, num_words=2 ** 12) -> BERTTokenizer:
     if os.path.exists("./vocab.txt"):
         print("Using existing vocabulary...")
     else:
         print("Creating Vocabulary...")
 
-        reserved_tokens = ["[PAD]", "[UNK]"]
+        reserved_tokens = ["[PAD]", "[UNK]", "NEWLINE"]
         bert_vocab_args = dict(
-            vocab_size=num_words or (2 ** 13),
+            vocab_size=num_words,
             reserved_tokens=reserved_tokens,
-            bert_tokenizer_params=dict(lower_case=False),
+            bert_tokenizer_params=dict(lower_case=True,
+                                       normalization_form="NFD",
+                                       ),
             learn_params={},
         )
-        dataset: tf.data.Dataset = tf.data.Dataset.from_tensor_slices(corpus)
-        dataset.batch(1024)
-        vocab = bert.bert_vocab_from_dataset(dataset, **bert_vocab_args)
+        with tf.device("/GPU:0"):
+            dataset: tf.data.Dataset = tf.data.Dataset.from_tensor_slices(corpus)
+            dataset = dataset.batch(batch_size=num_words)
+            vocab = bert.bert_vocab_from_dataset(dataset, **bert_vocab_args)
         del dataset
         with open("./vocab.txt", 'w') as vocab_file:
             for token in vocab:
                 print(token, file=vocab_file)
-    return BERTTokenizer("./vocab.txt")
+    return BERTTokenizer("./vocab.txt", keep_newline=True)
 
 
 def create_lyrics_corpus(dataset: pd.DataFrame, field: str):
@@ -54,13 +56,12 @@ def create_lyrics_corpus(dataset: pd.DataFrame, field: str):
     for index, row in dataset.iterrows():
         lyrics = row[field]
         if isinstance(lyrics, str):
-            lyrics_list.extend(cleanup_lyrics(lyrics))
+            lyrics_list.append(cleanup_lyrics(lyrics))
 
     return lyrics_list
 
 
-def cleanup_lyrics(lyrics: str) -> list[str]:
-    NEWLINE = "\n"
+def cleanup_lyrics(lyrics: str) -> str:
     for (contraction, expansion) in CONTRACTIONS:
         lyrics = re.sub(contraction, expansion, lyrics, flags=re.IGNORECASE)
 
@@ -69,23 +70,12 @@ def cleanup_lyrics(lyrics: str) -> list[str]:
     # Add spaces around punctuation.
     lyrics = re.sub(r"([?.!,¿/-])", r" \1 ", lyrics)
 
-    list_of_lyrics = []
-    for lyric in lyrics.split("\n\n"):
-        lyric = lyric.strip()
-        if not lyric:
-            continue
+    # To lowercase
+    lyrics = lyrics.lower()
 
-        lyric = lyric.replace("\n", NEWLINE)
-        # check if the lyric more than 1 line
-        if NEWLINE in lyric:
-            list_of_lyrics.append(lyric)
-        else:
-            if not list_of_lyrics:
-                list_of_lyrics.append(lyric)
-            else:
-                list_of_lyrics[-1] += NEWLINE + lyric
+    lyrics = re.sub(r"\n+", " NEWLINE ", lyrics)
 
-    return list_of_lyrics
+    return lyrics
 
 
 def _corpus_to_ngram(corpus) -> list:
@@ -128,7 +118,7 @@ def make_sequences_and_labels_from_df(df: pd.DataFrame, tokenizer: BERTTokenizer
     print("Creating Corpus...")
     start = datetime.datetime.now()
     corpus = create_lyrics_corpus(df, "lyrics")
-    print(f"Tokenizing {len(corpus)} lines of lyrics")
+    print(f"Tokenizing {len(corpus)} songs")
     tokenized_corpus = tokenizer.tokenize(corpus)
     del corpus
     print(f"Tokenized Corpus in {(datetime.datetime.now() - start).seconds} seconds")

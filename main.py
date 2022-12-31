@@ -16,7 +16,7 @@ from run_model import run
 DELIMITER = "|"
 max_seq_len = 64
 batch_size = 256
-songs_per_dataset = 512
+songs_per_dataset = 256
 
 
 def plot_graphs(_history, string):
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     physical_devices = tf.config.list_physical_devices('GPU')
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
     os.environ["TF_GPU_ALLOCATOR"] = "cuda_malloc_async"
-    # tf.config.run_functions_eagerly(False)
+    tf.config.run_functions_eagerly(True)
     log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
     # load data
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     else:
         # Create the corpus using the 'lyrics' column containing lyrics
         corpus = create_lyrics_corpus(dataset_df, 'lyrics')
-        tokenizer = create_tokenizer(corpus)
+        tokenizer = create_tokenizer(corpus, num_words=2 ** 14)
         del corpus
 
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
@@ -75,7 +75,7 @@ if __name__ == '__main__':
                 (input_sequences, tf.one_hot(labels, depth=tokenizer.get_vocab_size()))).batch(batch_size)
         del input_sequences, labels
         dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-        history = model.fit(dataset, epochs=2, verbose=1,
+        history = model.fit(dataset, epochs=3, verbose=1,
                             callbacks=[checkpoint_callback, ])
 
     print(f"Training Completed in {(datetime.datetime.now() - start_time).min} minutes")
