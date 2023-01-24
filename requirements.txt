@@ -1,7 +1,8 @@
-keras
-tensorflow
-tensorflow-text
+keras == 2.10.0
+tensorflow==2.10.1
+tensorflow-text == 2.10.0
 pandas
 lyricsgenius
 numpy
 matplotlib
+notebook

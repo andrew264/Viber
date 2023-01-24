@@ -4,8 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from main import DELIMITER
-from preprocessing import CONTRACTIONS, cleanup_lyrics
+DELIMITER = '|'
 
 
 def pretty(d, indent=0):
@@ -20,8 +19,6 @@ def pretty(d, indent=0):
 def word_counts(dataset: pd.DataFrame, x="-") -> dict[str, int]:
     dic = dict()
     lyrics = "".join(dataset["lyrics"].str.lower())
-    for (contraction, expansion) in CONTRACTIONS:
-        lyrics = re.sub(contraction, expansion, lyrics)
     for _line in lyrics.splitlines():
         for word in _line.split():
             if x in word.lower():
@@ -42,13 +39,14 @@ def replace_words_in_dataset(dataset: pd.DataFrame, old: str, new: str = "") -> 
 def word_frequency(dataset: pd.DataFrame) -> None:
     """ """
     word_freq = {}
-    clean_lyrics = cleanup_lyrics(dataset['lyrics'].str.cat())
-    for _line in clean_lyrics:
-        for _word in _line.split():
-            if _word in word_freq:
-                word_freq[_word] += 1
-            else:
-                word_freq[_word] = 1
+    lyrics = dataset['lyrics'].str.cat().lower()
+    lyrics = re.sub('[^ a-zA-Z0-9\n.?!,¿/-]', '', lyrics)
+    lyrics = re.sub(r"([?.!,¿/-])", r" \1 ", lyrics)
+    for _word in lyrics.split():
+        if _word in word_freq:
+            word_freq[_word] += 1
+        else:
+            word_freq[_word] = 1
 
     _dataset = pd.DataFrame.from_dict(word_freq, orient="index")
     _dataset.to_csv("word-frequency.csv", header=["FREQUENCY"])
@@ -60,11 +58,13 @@ if __name__ == '__main__':
     # get all artists
     artists = dataset_df["artist"].unique()
     print(f"Total artists: {len(artists)}")
+    # All Artists and their number of songs
+    print("Artists and their number of songs")
+    pretty(dataset_df["artist"].value_counts().to_dict())
     print(f"Total songs: {len(dataset_df)}")
     word_frequency(dataset_df)
 
     # iterate over dataset
-    index: int
     for index, row in dataset_df.iterrows():
         for line in row['lyrics'].split('\n'):
             if line.strip() != '':

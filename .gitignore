@@ -3,7 +3,7 @@ config.json
 vocab.txt
 /.idea
 /__pycache__
-/saved_model
+/one_step
 /.run
-/checkpoints
+/training_checkpoints
 /logs

@@ -8,7 +8,7 @@ from lyricsgenius.artist import Artist
 from lyricsgenius.song import Song
 
 DELIMITER = "|"
-MAX_SONGS = 100
+MAX_SONGS = 50
 ARTISTS = []
 
 
@@ -23,7 +23,8 @@ def cleanup_lyrics(lyrics: str) -> str:
     #     lyrics = lyrics.split("\n", 1)[1]
     # except IndexError:
     #     pass
-    lyrics = re.sub(r"[\(\[].*?[\)\]]", "", lyrics)
+    lyrics = re.sub(r"[\(\[].*?[\)\]]", '', lyrics)
+    lyrics = re.sub(r"You might also like", '', lyrics)
     lyrics = re.sub(r"[0-9]*URLCopyEmbedCopy", '', lyrics)
     lyrics = re.sub(r"[0-9]*Embed", '', lyrics)
     # if first line has "Lyrics" in it, remove it
