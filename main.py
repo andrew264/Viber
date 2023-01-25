@@ -7,11 +7,11 @@ import tensorflow as tf
 from model import MyModel, OneStep
 
 DELIMITER = '|'
-seq_length = 100
+seq_length = 128
 
 BATCH_SIZE = 128
 BUFFER_SIZE = 10000
-EPOCHS = 2
+EPOCHS = 4
 
 dataset_df = pd.read_csv('dataset.csv', dtype=str, delimiter=DELIMITER).sample(frac=1)
 
@@ -79,7 +79,8 @@ if os.path.exists(checkpoint_dir):
     print("Loaded model from checkpoint")
 
 loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
-model.compile(optimizer='adam', loss=loss, metrics=['accuracy'])
+optimizer = tf.optimizers.Adamax(learning_rate=0.01)
+model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
 
 model.fit(dataset, epochs=EPOCHS, callbacks=[checkpoint_callback])
 

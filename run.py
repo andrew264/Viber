@@ -21,6 +21,8 @@ def get_initial_state(rnn_units):
 if not os.path.exists("one_step"):
     raise ValueError("You need to train a model first.")
 one_step_model: OneStep = tf.saved_model.load("one_step")
+one_step_model.temperature = 0.40
+print("Temperature: ", one_step_model.temperature)
 
 while True:
     print("_" * 80)
@@ -31,6 +33,7 @@ while True:
     print(string_input, end="")
     string_input = tf.constant([string_input])
     for n in range(500):
+        string_input = string_input[-128:]
         next_char, states = one_step_model.generate_one_step(string_input,
                                                              states=states)
         states = [tf.convert_to_tensor(state) for state in states]
