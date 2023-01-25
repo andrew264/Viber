@@ -1,7 +1,8 @@
-import tensorflow as tf
-
 import os
+import re
+
 import pandas as pd
+import tensorflow as tf
 
 from model import MyModel, OneStep
 
@@ -10,11 +11,12 @@ seq_length = 100
 
 BATCH_SIZE = 128
 BUFFER_SIZE = 10000
-EPOCHS = 10
+EPOCHS = 2
 
 dataset_df = pd.read_csv('dataset.csv', dtype=str, delimiter=DELIMITER).sample(frac=1)
 
 lyrics = dataset_df['lyrics'].str.cat()
+lyrics = re.sub(r'\n{2,}', '\n', lyrics)
 vocab = sorted(set(lyrics))
 print(f'{len(vocab)} unique characters')
 
@@ -74,6 +76,7 @@ model = MyModel(
 
 if os.path.exists(checkpoint_dir):
     model.load_weights(tf.train.latest_checkpoint(checkpoint_dir))
+    print("Loaded model from checkpoint")
 
 loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
 model.compile(optimizer='adam', loss=loss, metrics=['accuracy'])

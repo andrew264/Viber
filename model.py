@@ -5,23 +5,32 @@ from keras.layers import StringLookup
 
 
 class MyModel(tf.keras.Model):
-    def __init__(self, vocab_size, embedding_dim, rnn_units):
+    def __init__(self, vocab_size, embedding_dim, rnn_units, dropout_rate=0.1):
         super().__init__(self)
-        self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
-        self.lstm = tf.keras.layers.LSTM(rnn_units,
-                                         return_sequences=True,
-                                         return_state=True)
-        self.dense = tf.keras.layers.Dense(vocab_size)
+        self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim, name="embedding")
+        self.lstm1 = tf.keras.layers.LSTM(rnn_units,
+                                          return_sequences=True,
+                                          return_state=True,
+                                          name="lstm_1")
+        self.dropout = tf.keras.layers.Dropout(dropout_rate)
+        self.lstm2 = tf.keras.layers.LSTM(rnn_units,
+                                          return_sequences=True,
+                                          return_state=True,
+                                          name="lstm_2")
+        self.dense = tf.keras.layers.Dense(vocab_size, name="dense_1")
 
     @tf.function
     def call(self, inputs, states=None, return_state=False, training=False):
         x = inputs
         x = self.embedding(x, training=training)
         if states is None:
-            state1, state2 = self.lstm.get_initial_state(x)
-            states = (state1, state2)
-        x, state1, state2 = self.lstm(x, initial_state=states, training=training)
-        states = (state1, state2)
+            state1, state2 = self.lstm1.get_initial_state(x)
+            state3, state4 = self.lstm2.get_initial_state(x)
+            states = (state1, state2, state3, state4)
+        x, state1, state2 = self.lstm1(x, initial_state=states[:2], training=training)
+        x = self.dropout(x, training=training)
+        x, state3, state4 = self.lstm2(x, initial_state=states[2:], training=training)
+        states = (state1, state2, state3, state4)
         x = self.dense(x, training=training)
 
         if return_state:
@@ -31,7 +40,10 @@ class MyModel(tf.keras.Model):
 
 
 class OneStep(tf.keras.Model, ABC):
-    def __init__(self, model, chars_from_ids, ids_from_chars, temperature=1.0):
+    def __init__(self, model: MyModel,
+                 chars_from_ids: StringLookup,
+                 ids_from_chars: StringLookup,
+                 temperature: float = 1.0):
         super().__init__()
         self.temperature = temperature
         self.model = model
@@ -49,7 +61,9 @@ class OneStep(tf.keras.Model, ABC):
         self.prediction_mask = tf.sparse.to_dense(sparse_mask)
         inputs = tf.TensorSpec(shape=[None], dtype=tf.string)
         states = [tf.TensorSpec(shape=[None, None], dtype=tf.float32, name='state1'),
-                  tf.TensorSpec(shape=[None, None], dtype=tf.float32, name='state2')]
+                  tf.TensorSpec(shape=[None, None], dtype=tf.float32, name='state2'),
+                  tf.TensorSpec(shape=[None, None], dtype=tf.float32, name='state3'),
+                  tf.TensorSpec(shape=[None, None], dtype=tf.float32, name='state4')]
         self.generate_one_step.get_concrete_function(inputs, states)
 
     @tf.function
