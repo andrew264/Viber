@@ -108,17 +108,38 @@ class FullTokenizer(object):
         self.inv_vocab = {v: k for k, v in self.vocab.items()}
 
     def tokenize(self, text):
-        return self.sp_model.EncodeAsIds(text)
+        tokens = self.sp_model.EncodeAsIds(text)
+        return tf.convert_to_tensor(tokens, dtype=tf.int16)
 
     def detokenize(self, tokens):
+        if isinstance(tokens, tf.Tensor):
+            tokens = tokens.numpy().tolist()
         return self.sp_model.DecodeIds(tokens)
 
     def convert_tokens_to_ids(self, tokens):
-        return [self.sp_model.PieceToId(printable_text(token)) for token in tokens]
+        if isinstance(tokens, tf.Tensor):
+            tokens = tokens.numpy().tolist()
+        ids = [self.sp_model.PieceToId(printable_text(token)) for token in tokens]
+        return tf.convert_to_tensor(ids, dtype=tf.int16)
 
     def convert_ids_to_tokens(self, ids):
-        return [self.sp_model.IdToPiece(id_) for id_ in ids]
+        if isinstance(ids, tf.Tensor):
+            ids = ids.numpy().tolist()
+        tokens = [self.sp_model.IdToPiece(id_) for id_ in ids]
+        return tf.convert_to_tensor(tokens, dtype=tf.string)
 
     @property
     def vocab_size(self):
         return self.sp_model.vocab_size()
+
+
+if __name__ == '__main__':
+    import sentencepiece as spm
+    import pandas as pd
+
+    dataset = pd.read_csv('dataset.csv', delimiter='|')
+    lyrics = dataset['lyrics'].str.cat()
+    with open('lyrics.txt', 'w') as f:
+        f.write(lyrics)
+
+    spm.SentencePieceTrainer.train(input='lyrics.txt', model_prefix='sp_model', vocab_size=512, model_type='unigram', shuffle_input_sentence=True, num_threads=20, user_defined_symbols=['\n'])
