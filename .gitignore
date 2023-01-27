@@ -1,8 +1,11 @@
 *.csv
 config.json
 vocab.txt
+*.vocab
+*.model
 /.idea
 /__pycache__
+/model
 /one_step
 /.run
 /training_checkpoints

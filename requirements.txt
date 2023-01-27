@@ -6,3 +6,4 @@ lyricsgenius
 numpy
 matplotlib
 notebook
+sentencepiece
