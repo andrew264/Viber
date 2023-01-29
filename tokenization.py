@@ -1,8 +1,11 @@
 import collections
+
 import six
-import unicodedata
 import tensorflow as tf
+import unicodedata
 import sentencepiece as spm
+from tensorflow.python.ops.numpy_ops import np_config
+np_config.enable_numpy_behavior()
 
 SPIECE_UNDERLINE = u"▁".encode("utf-8")
 
@@ -108,6 +111,8 @@ class FullTokenizer(object):
         self.inv_vocab = {v: k for k, v in self.vocab.items()}
 
     def tokenize(self, text):
+        if isinstance(text, tf.Tensor):
+            text = text.numpy().tolist()
         tokens = self.sp_model.EncodeAsIds(text)
         return tf.convert_to_tensor(tokens, dtype=tf.int16)
 
@@ -134,7 +139,6 @@ class FullTokenizer(object):
 
 
 if __name__ == '__main__':
-    import sentencepiece as spm
     import pandas as pd
 
     dataset = pd.read_csv('dataset.csv', delimiter='|')
